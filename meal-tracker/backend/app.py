@@ -189,5 +189,42 @@ def supabase_create_meal():
 
     return jsonify({**meal, "calorieExplanation": detection["explanation"]}), 201
 
+
+@app.route('/summary', methods=['GET'])
+def supabase_summary():
+    try:
+        response = supabase.table("meals").select("*").execute()
+    except Exception as exc:
+        return jsonify({"error": "Failed to query Supabase.", "details": str(exc)}), 500
+
+    if getattr(response, "error", None):
+        error_message = getattr(response.error, "message", str(response.error))
+        return jsonify({"error": "Supabase returned an error.", "details": error_message}), 502
+
+    normalized = [_normalize_supabase_row(item) for item in (response.data or [])]
+    if not normalized:
+        return jsonify(
+            {
+                "count": 0,
+                "total_calories": 0,
+                "avg_calories": 0,
+                "total_points": 0,
+            }
+        )
+
+    count = len(normalized)
+    total_calories = sum(meal.get("calories") or 0 for meal in normalized)
+    total_points = sum(meal.get("points") or 0 for meal in normalized)
+    avg_calories = total_calories / count if count else 0
+
+    return jsonify(
+        {
+            "count": count,
+            "total_calories": total_calories,
+            "avg_calories": avg_calories,
+            "total_points": total_points,
+        }
+    )
+
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5000, debug=True)
