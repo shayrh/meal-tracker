@@ -70,6 +70,20 @@ allowed_origins = [
 ]
 CORS(app, resources={r"/*": {"origins": allowed_origins}})
 
+
+@app.before_request
+def check_api_key():
+    public_endpoints = {"healthz", "api_health"}
+    if request.endpoint in public_endpoints:
+        return
+    api_key = request.headers.get("X-API-Key")
+    secret = os.getenv("API_SECRET")
+    if not secret:
+        return jsonify({"error": "Server misconfigured: missing API_SECRET"}), 500
+    if api_key != secret:
+        return jsonify({"error": "Unauthorized"}), 401
+
+
 app.register_blueprint(meals_bp)
 app.register_blueprint(users_bp)
 app.register_blueprint(auth_bp)

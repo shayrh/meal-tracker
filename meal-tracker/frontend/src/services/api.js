@@ -1,8 +1,21 @@
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
+const API_KEY = process.env.REACT_APP_API_SECRET;
 
-async function request(path, options = {}) {
+if (!API_BASE_URL) {
+  throw new Error('REACT_APP_API_BASE_URL is not defined. Set it in frontend/.env.local');
+}
+
+if (!API_KEY) {
+  throw new Error('REACT_APP_API_SECRET is not defined. Set it in frontend/.env.local');
+}
+
+export async function fetchWithAuth(path, options = {}) {
   const response = await fetch(`${API_BASE_URL}${path}`, {
-    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+    headers: {
+      'Content-Type': 'application/json',
+      'X-API-Key': API_KEY,
+      ...(options.headers || {}),
+    },
     ...options,
   });
   if (!response.ok) {
@@ -19,27 +32,31 @@ async function request(path, options = {}) {
 }
 
 export function fetchMeals() {
-  return request('/meals');
+  return fetchWithAuth('/meals');
 }
 
 export function createMeal(payload) {
-  return request('/meals', {
+  return fetchWithAuth('/meals', {
     method: 'POST',
     body: JSON.stringify(payload),
   });
 }
 
 export function fetchInsights() {
-  return request('/api/meals/insights');
+  return fetchWithAuth('/api/meals/insights');
 }
 
 export function fetchProfile() {
-  return request('/api/users/profile');
+  return fetchWithAuth('/api/users/profile');
 }
 
 export function updateProfile(payload) {
-  return request('/api/users/profile', {
+  return fetchWithAuth('/api/users/profile', {
     method: 'PUT',
     body: JSON.stringify(payload),
   });
+}
+
+export function fetchSummary() {
+  return fetchWithAuth('/summary');
 }
