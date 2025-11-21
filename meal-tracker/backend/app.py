@@ -67,12 +67,15 @@ allowed_origins = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
     "https://app.shaysystems.com",
+    "https://meal.shaysystems.com",
 ]
 CORS(app, resources={r"/*": {"origins": allowed_origins}})
 
 
 @app.before_request
 def check_api_key():
+    if request.method == "OPTIONS":
+        return
     public_endpoints = {"healthz", "api_health"}
     if request.endpoint in public_endpoints:
         return
