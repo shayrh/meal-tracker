@@ -33,7 +33,10 @@ def create_meal():
     if not detection["foods"]:
         return jsonify({"error": "Provide at least one food item or a photo reference."}), 400
 
-    calories = float(payload.get("calories", detection["calories"]))
+    try:
+        calories = float(payload.get("calories", detection["calories"]))
+    except (TypeError, ValueError):
+        return jsonify({"error": "Calories must be a number."}), 400
     points = calculate_points(calories, detection["foods"])
 
     meal = record_meal(
