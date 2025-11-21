@@ -73,7 +73,7 @@ def _allowed_origins():
     defaults = [
         "http://localhost:3000",
         "http://127.0.0.1:3000",
-        "https://app.shaysystems.com",
+        "https://api.shaysystems.com",
         "https://meal.shaysystems.com",
     ]
     raw = os.getenv("ALLOWED_ORIGINS")
