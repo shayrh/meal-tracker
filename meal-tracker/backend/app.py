@@ -34,7 +34,9 @@ def _normalize_supabase_row(row):
         return payload
     meal_name = row.get("meal_name")
     calories = row.get("calories")
-    created_at = row.get("created_at") or row.get("createdAt") or row.get("inserted_at")
+    created_at = (
+        row.get("created_at") or row.get("createdAt") or row.get("inserted_at")
+    )
     foods = []
     if meal_name:
         foods.append({"name": meal_name, "calories": calories})
@@ -62,14 +64,24 @@ def _maybe_disable_payload(message, insert_payload):
     _SUPABASE_SUPPORTS_PAYLOAD = False
     return True
 
+
+def _allowed_origins():
+    defaults = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "https://app.shaysystems.com",
+        "https://meal.shaysystems.com",
+    ]
+    raw = os.getenv("ALLOWED_ORIGINS")
+    if not raw:
+        return defaults
+    parsed = [item.strip() for item in raw.split(",") if item.strip()]
+    return parsed or defaults
+
+
 app = Flask(__name__)
-allowed_origins = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "https://app.shaysystems.com",
-    "https://meal.shaysystems.com",
-]
-CORS(app, resources={r"/*": {"origins": allowed_origins}})
+allowed_origins = _allowed_origins()
+CORS(app, resources={r"/*": {"origins": allowed_origins}}, allow_headers=["Content-Type", "X-API-Key"])
 
 
 @app.before_request
@@ -82,7 +94,9 @@ def check_api_key():
     api_key = request.headers.get("X-API-Key")
     secret = os.getenv("API_SECRET")
     if not secret:
-        return jsonify({"error": "Server misconfigured: missing API_SECRET"}), 500
+        return jsonify({
+            "error": "Server misconfigured: missing API_SECRET"
+        }), 500
     if api_key != secret:
         return jsonify({"error": "Unauthorized"}), 401
 
@@ -91,6 +105,7 @@ app.register_blueprint(meals_bp)
 app.register_blueprint(users_bp)
 app.register_blueprint(auth_bp)
 
+
 @app.route('/bmi', methods=['POST'])
 def bmi():
     data = request.get_json(force=True, silent=True) or {}
@@ -98,12 +113,15 @@ def bmi():
         weight = float(data['weight'])
         height = float(data['height'])
     except (KeyError, TypeError, ValueError):
-        return jsonify({"error": "Both numeric weight and height are required."}), 400
+        return jsonify({
+            "error": "Both numeric weight and height are required."
+        }), 400
     try:
         bmi = calc_bmi(weight, height)
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
     return jsonify({"bmi": bmi})
+
 
 @app.route('/healthz')
 def healthz():
@@ -115,6 +133,7 @@ def healthz():
         "service_key_loaded": service_key_loaded,
         "supabase_ready": supabase_url_loaded and service_key_loaded,
     })
+
 
 @app.route('/api/healthz')
 def api_health():
