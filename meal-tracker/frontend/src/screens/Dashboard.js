@@ -27,6 +27,10 @@ export default function Dashboard() {
         height: profileResponse.profile?.height ?? null,
         weight: profileResponse.profile?.weight ?? null,
         bmi: profileResponse.bmi ?? null,
+        estimatedCalories: profileResponse.estimatedCalories ?? null,
+        gender: profileResponse.profile?.gender ?? '',
+        age: profileResponse.profile?.age ?? '',
+        activity_level: profileResponse.profile?.activity_level ?? profileResponse.profile?.activityLevel ?? '',
       });
     } catch (err) {
       setError(err.message || 'Unable to load data');
@@ -52,6 +56,7 @@ export default function Dashboard() {
       height: response.profile.height,
       weight: response.profile.weight,
       bmi: response.bmi,
+      estimatedCalories: response.estimatedCalories ?? null,
     });
   };
 

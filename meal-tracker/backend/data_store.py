@@ -9,8 +9,10 @@ from typing import Dict, List, Optional
 class Meal:
     id: int
     foods: List[Dict[str, float]]
+    ingredients: List[str]
     calories: float
     points: int
+    meal_type: Optional[str]
     mood: Optional[str]
     notes: Optional[str]
     photo: Optional[str]
@@ -20,7 +22,13 @@ class Meal:
 
 
 _meals: List[Meal] = []
-_user_profile: Dict[str, Optional[float]] = {"height": None, "weight": None}
+_user_profile: Dict[str, Optional[float]] = {
+    "height": None,
+    "weight": None,
+    "gender": None,
+    "age": None,
+    "activity_level": None,
+}
 
 
 def _next_meal_id() -> int:
@@ -29,8 +37,10 @@ def _next_meal_id() -> int:
 
 def record_meal(
     foods: List[Dict[str, float]],
+    ingredients: Optional[List[str]],
     calories: float,
     points: int,
+    meal_type: Optional[str] = None,
     mood: Optional[str] = None,
     notes: Optional[str] = None,
     photo: Optional[str] = None,
@@ -40,8 +50,10 @@ def record_meal(
     meal = Meal(
         id=_next_meal_id(),
         foods=foods,
+        ingredients=ingredients or [],
         calories=round(calories, 1),
         points=points,
+        meal_type=meal_type,
         mood=mood,
         notes=notes,
         photo=photo,
@@ -81,9 +93,21 @@ def user_profile() -> Dict[str, Optional[float]]:
     return _user_profile
 
 
-def update_profile(height: Optional[float], weight: Optional[float]) -> Dict[str, Optional[float]]:
+def update_profile(
+    height: Optional[float],
+    weight: Optional[float],
+    gender: Optional[str] = None,
+    age: Optional[float] = None,
+    activity_level: Optional[str] = None,
+) -> Dict[str, Optional[float]]:
     if height is not None:
         _user_profile["height"] = height
     if weight is not None:
         _user_profile["weight"] = weight
+    if gender is not None:
+        _user_profile["gender"] = gender
+    if age is not None:
+        _user_profile["age"] = age
+    if activity_level is not None:
+        _user_profile["activity_level"] = activity_level
     return _user_profile

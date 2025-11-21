@@ -47,15 +47,25 @@ def _normalize_supabase_row(row):
     return {
         "id": row.get("id"),
         "foods": foods,
+        "ingredients": row.get("ingredients") or [food["name"] for food in foods],
         "calories": calories,
         "points": row.get("points") or 0,
         "mood": row.get("mood"),
         "notes": row.get("notes"),
         "photo": row.get("photo_url"),
+        "meal_type": row.get("meal_type"),
         "calorie_method": row.get("calorie_method", "manual"),
         "calorie_confidence": row.get("calorie_confidence", 0.0),
         "created_at": created_at,
     }
+
+
+def _as_list(value):
+    if isinstance(value, str):
+        return [item.strip() for item in value.split(",") if item.strip()]
+    if isinstance(value, list):
+        return value
+    return []
 
 
 def _maybe_disable_payload(message, insert_payload):
@@ -206,7 +216,16 @@ def supabase_meal_list():
 @app.route('/meals', methods=['POST'])
 def supabase_create_meal():
     payload = request.get_json(force=True, silent=True) or {}
-    foods_payload = payload.get("foods")
+    foods_payload = _as_list(payload.get("foods"))
+    ingredients_payload = _as_list(payload.get("ingredients"))
+    meal_type = payload.get("mealType") or payload.get("meal_type")
+    if not foods_payload and meal_type:
+        foods_payload = [meal_type]
+    if not foods_payload and ingredients_payload:
+        foods_payload = ingredients_payload
+    if not ingredients_payload and foods_payload:
+        ingredients_payload = foods_payload
+
     photo_hint = payload.get("photoUrl") or payload.get("photoData") or ""
     detection = detect_calories(
         foods=foods_payload,
@@ -215,7 +234,7 @@ def supabase_create_meal():
     )
 
     if not detection["foods"]:
-        return jsonify({"error": "Provide at least one food item or a photo reference."}), 400
+        return jsonify({"error": "Provide a meal type, food item, or a photo reference."}), 400
 
     try:
         calories_value = float(payload.get("calories", detection["calories"]))
@@ -226,8 +245,10 @@ def supabase_create_meal():
 
     meal = record_meal(
         foods=detection["foods"],
+        ingredients=ingredients_payload or [food["name"] for food in detection["foods"] if food.get("name")],
         calories=calories_value,
         points=points,
+        meal_type=meal_type,
         notes=payload.get("notes"),
         mood=payload.get("mood"),
         photo=payload.get("photoUrl") or payload.get("photoData"),

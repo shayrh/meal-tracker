@@ -5,6 +5,11 @@ const formatDate = (isoString) => {
   return new Date(isoString).toLocaleString();
 };
 
+const formatMealType = (value) => {
+  if (!value) return '';
+  return value.charAt(0).toUpperCase() + value.slice(1);
+};
+
 export default function MealHistory({ meals }) {
   if (!meals?.length) {
     return (
@@ -32,10 +37,12 @@ export default function MealHistory({ meals }) {
               <span>{formatDate(meal.created_at)}</span>
             </header>
             <div className="meal-meta">
+              {meal.meal_type && <span>{formatMealType(meal.meal_type)}</span>}
               <span>{meal.calories} kcal</span>
               <span>{meal.points} pts</span>
               {meal.mood && <span>{meal.mood}</span>}
             </div>
+            {meal.ingredients?.length > 0 && <p className="ingredients">{meal.ingredients.join(', ')}</p>}
             <ul className="food-list">
               {meal.foods?.map((food) => (
                 <li key={food.name}>

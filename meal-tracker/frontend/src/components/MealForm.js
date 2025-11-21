@@ -2,13 +2,12 @@ import { useState } from 'react';
 import CameraButton from './CameraButton';
 
 const moods = ['Energized', 'Balanced', 'Hungry', 'Sleepy'];
+const mealTypes = ['Breakfast', 'Lunch', 'Dinner'];
 
 export default function MealForm({ onSubmit }) {
-  const [foods, setFoods] = useState('');
-  const [notes, setNotes] = useState('');
-  const [calories, setCalories] = useState('');
   const [photoData, setPhotoData] = useState('');
   const [photoUrl, setPhotoUrl] = useState('');
+  const [mealType, setMealType] = useState('');
   const [mood, setMood] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [cameraVersion, setCameraVersion] = useState(0);
@@ -19,36 +18,28 @@ export default function MealForm({ onSubmit }) {
     setSubmitting(true);
     setError('');
     const payload = {
-      foods: foods
-        .split(',')
-        .map((item) => item.trim())
-        .filter(Boolean),
-      notes,
+      foods: [],
+      ingredients: [],
       mood: mood || undefined,
-      calories: calories ? Number(calories) : undefined,
+      mealType: mealType || undefined,
     };
-    if (!notes) {
-      delete payload.notes;
-    }
     if (photoData) {
       payload.photoData = photoData;
     }
     if (photoUrl) {
       payload.photoUrl = photoUrl;
     }
-    if (!payload.foods.length && !payload.photoData && !payload.photoUrl) {
-      setError('Add at least one food or attach a photo to continue.');
+    if (!payload.photoData && !payload.photoUrl && !mealType) {
+      setError('Select a meal type or attach a photo to continue.');
       setSubmitting(false);
       return;
     }
     try {
       await onSubmit(payload);
-      setFoods('');
-      setNotes('');
-      setCalories('');
       setPhotoData('');
       setPhotoUrl('');
       setCameraVersion((version) => version + 1);
+      setMealType('');
       setMood('');
     } catch (err) {
       setError(err.message || 'Unable to log meal');
@@ -61,28 +52,19 @@ export default function MealForm({ onSubmit }) {
     <div className="card">
       <div className="card-header">
         <h2>Record a Meal</h2>
-        <p>Describe your plate or snap a picture and we will estimate the calories.</p>
+        <p>Choose your meal type, add an optional photo, and we will estimate the calories.</p>
       </div>
       <form className="meal-form" onSubmit={handleSubmit}>
         <label>
-          Foods
-          <input
-            type="text"
-            placeholder="e.g. grilled chicken, salad, rice"
-            value={foods}
-            onChange={(event) => setFoods(event.target.value)}
-          />
-          <span className="help-text">Comma separated list of foods.</span>
-        </label>
-        <label>
-          Estimated Calories
-          <input
-            type="number"
-            value={calories}
-            onChange={(event) => setCalories(event.target.value)}
-            placeholder="Optional override"
-            min="0"
-          />
+          Meal Type
+          <select value={mealType} onChange={(event) => setMealType(event.target.value)}>
+            <option value="">Select meal</option>
+            {mealTypes.map((option) => (
+              <option key={option} value={option.toLowerCase()}>
+                {option}
+              </option>
+            ))}
+          </select>
         </label>
         <label>
           Mood
@@ -94,15 +76,6 @@ export default function MealForm({ onSubmit }) {
               </option>
             ))}
           </select>
-        </label>
-        <label>
-          Notes
-          <textarea
-            rows="3"
-            value={notes}
-            onChange={(event) => setNotes(event.target.value)}
-            placeholder="How did you feel, what did you notice?"
-          />
         </label>
         <label>
           Photo URL
