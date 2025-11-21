@@ -14,6 +14,7 @@ from utils.calories_detect import detect_calories
 from utils.gamification import calculate_points
 
 _SUPABASE_SUPPORTS_PAYLOAD = True
+API_SECRET = os.getenv("API_SECRET")
 
 
 def _resolve_user_id(value):
@@ -92,12 +93,11 @@ def check_api_key():
     if request.endpoint in public_endpoints:
         return
     api_key = request.headers.get("X-API-Key")
-    secret = os.getenv("API_SECRET")
-    if not secret:
+    if not API_SECRET:
         return jsonify({
             "error": "Server misconfigured: missing API_SECRET"
         }), 500
-    if api_key != secret:
+    if api_key != API_SECRET:
         return jsonify({"error": "Unauthorized"}), 401
 
 
