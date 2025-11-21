@@ -1,8 +1,10 @@
 import json
 import os
 
-from flask import Flask, jsonify, request
+import jwt
+from flask import Flask, g, jsonify, request
 from flask_cors import CORS
+from jwt import InvalidTokenError
 
 from data_store import record_meal
 from routes.auth import auth_bp
@@ -15,6 +17,7 @@ from utils.gamification import calculate_points
 
 _SUPABASE_SUPPORTS_PAYLOAD = True
 API_SECRET = os.getenv("API_SECRET")
+JWT_SECRET = os.getenv("JWT_SECRET")
 
 
 def _resolve_user_id(value):
@@ -80,6 +83,32 @@ def _allowed_origins():
     return parsed or defaults
 
 
+def _bearer_token():
+    auth_header = (request.headers.get("Authorization") or "").strip()
+    if not auth_header:
+        return None
+    if " " in auth_header:
+        scheme, token = auth_header.split(" ", 1)
+        if scheme.lower() == "bearer":
+            return token.strip()
+    return auth_header
+
+
+def _api_secret_provided():
+    candidate = _bearer_token() or request.headers.get("X-API-Key")
+    return API_SECRET and candidate == API_SECRET
+
+
+def _validate_jwt_token(token):
+    if not JWT_SECRET:
+        return None, jsonify({"error": "Server misconfigured: missing JWT_SECRET"}), 500
+    try:
+        payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+        return payload.get("sub"), None, None
+    except InvalidTokenError:
+        return None, jsonify({"error": "Unauthorized"}), 401
+
+
 app = Flask(__name__)
 allowed_origins = _allowed_origins()
 CORS(app, resources={r"/*": {"origins": allowed_origins}}, allow_headers=["Content-Type", "X-API-Key"])
@@ -90,15 +119,33 @@ def check_api_key():
     if request.method == "OPTIONS":
         return
     public_endpoints = {"healthz", "api_health"}
+    guarded_auth_endpoints = {"auth.signup", "auth.login"}
     if request.endpoint in public_endpoints:
         return
-    api_key = request.headers.get("X-API-Key")
-    if not API_SECRET:
-        return jsonify({
-            "error": "Server misconfigured: missing API_SECRET"
-        }), 500
-    if api_key != API_SECRET:
-        return jsonify({"error": "Unauthorized"}), 401
+    bearer = _bearer_token()
+
+    if request.endpoint in guarded_auth_endpoints:
+        if not API_SECRET:
+            return jsonify({"error": "Server misconfigured: missing API_SECRET"}), 500
+        if not _api_secret_provided():
+            return jsonify({"error": "Unauthorized"}), 401
+        return
+
+    if bearer and API_SECRET and bearer == API_SECRET:
+        return
+
+    if bearer:
+        user_email, error_response, status = _validate_jwt_token(bearer)
+        if error_response:
+            # status can be None when error_response already contains status, but Flask accepts (response, status)
+            return error_response, status
+        g.current_user = user_email
+        return
+
+    if _api_secret_provided():
+        return
+
+    return jsonify({"error": "Unauthorized"}), 401
 
 
 app.register_blueprint(meals_bp)
